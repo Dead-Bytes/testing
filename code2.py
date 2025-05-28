@@ -1,53 +1,45 @@
 import tensorflow as tf
-from tensorflow.keras import datasets, layers, models
+import tensorflow_hub as hub
+import numpy as np
+import cv2
 import matplotlib.pyplot as plt
 
-# Load and preprocess the dataset (e.g., CIFAR-10)
-(train_images, train_labels), (test_images, test_labels) = datasets.cifar10.load_data()
+# Load a pre-trained Faster R-CNN model from TensorFlow Hub
+detector = hub.load("https://tfhub.dev/google/fasterrcnn/openimages_v4/inception_resnet_v2/1")
 
-# Normalize pixel values to be between 0 and 1
-train_images, test_images = train_images / 255.0, test_images / 255.0
+# Load and preprocess an image (you can replace with your own image)
+def load_image(path):
+    img = cv2.imread(path)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img_resized = tf.image.resize(img, (640, 640)) / 255.0  # Normalize
+    return img, tf.expand_dims(img_resized, axis=0)
 
-# Define the class names for CIFAR-10
-class_names = ['airplane', 'automobile', 'bird', 'cat', 'deer',
-               'dog', 'frog', 'horse', 'ship', 'truck']
+# Example image
+img_path = 'path_to_your_image.jpg'  # replace with actual path
+orig_img, input_tensor = load_image(img_path)
 
-# Define the CNN model
-model = models.Sequential([
-    layers.Conv2D(32, (3, 3), activation='relu', input_shape=(32, 32, 3)),
-    layers.MaxPooling2D((2, 2)),
-    
-    layers.Conv2D(64, (3, 3), activation='relu'),
-    layers.MaxPooling2D((2, 2)),
-    
-    layers.Conv2D(64, (3, 3), activation='relu'),
-    layers.Flatten(),
-    
-    layers.Dense(64, activation='relu'),
-    layers.Dense(10)  # 10 classes for CIFAR-10
-])
+# Run object detection
+result = detector(input_tensor)
+result = {key: value.numpy() for key, value in result.items()}
 
-# Compile the model
-model.compile(optimizer='adam',
-              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-              metrics=['accuracy'])
+# Visualize detection results
+def draw_boxes(img, boxes, class_names, scores, threshold=0.5):
+    for box, cls, score in zip(boxes, class_names, scores):
+        if score < threshold:
+            continue
+        y1, x1, y2, x2 = box
+        start_point = (int(x1 * img.shape[1]), int(y1 * img.shape[0]))
+        end_point = (int(x2 * img.shape[1]), int(y2 * img.shape[0]))
+        img = cv2.rectangle(img, start_point, end_point, (255, 0, 0), 2)
+        label = f"{cls.decode('ascii')}: {score:.2f}"
+        cv2.putText(img, label, start_point, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
+    return img
 
-# Print the model architecture
-model.summary()
+detected_img = draw_boxes(orig_img.copy(), result["detection_boxes"],
+                          result["detection_class_entities"], result["detection_scores"])
 
-# Train the model
-history = model.fit(train_images, train_labels, epochs=10,
-                    validation_data=(test_images, test_labels))
-
-# Evaluate the model
-test_loss, test_acc = model.evaluate(test_images, test_labels, verbose=2)
-print('\nTest accuracy:', test_acc)
-
-# Plot training history
-plt.plot(history.history['accuracy'], label='train accuracy')
-plt.plot(history.history['val_accuracy'], label='validation accuracy')
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
-plt.legend()
-plt.title('Training and Validation Accuracy')
+plt.figure(figsize=(10, 10))
+plt.imshow(detected_img)
+plt.axis('off')
+plt.title('Detected Objects with Faster R-CNN')
 plt.show()
