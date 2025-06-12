@@ -6,15 +6,6 @@ In the rapidly evolving field of artificial intelligence, ensuring the accuracy 
 
 
 ---
-
-## Key Findings from the Research
-
-1. **Model Performance Variability**: Proprietary LLMs like Gemini, GPT, and Claude tend to perform well when provided with sufficient context but may still produce incorrect answers instead of abstaining when the context is insufficient. Open-source models such as Llama, Mistral, and Gemma often hallucinate or abstain even when sufficient context is available. ([Google Research][5])
-
-2. **Sufficient Context Autorater**: The researchers developed an LLM-based tool called the Sufficient Context Autorater, which classifies query-context pairs as having sufficient or insufficient context. Gemini 1.5 Pro (1-shot) achieved a 93% accuracy rate in this classification task, outperforming other models. ([Search Engine Journal][3])
-
-3. **Selective Generation Method**: To reduce hallucinations, the study introduced a selective generation approach that leverages sufficient context information for guided abstention. This method improved the fraction of correct answers among times where the model responds by 2–10% for models like Gemini, GPT, and Gemma. ([ICLR][6], [Google Research][5])
-
 ---
 
 ## Implications for AI Development
